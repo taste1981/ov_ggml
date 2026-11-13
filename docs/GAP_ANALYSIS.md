@@ -1,0 +1,71 @@
+# Gap analysis: OpenVINO GGML device ("Vulkan fallback"), status 2026-11-13
+
+The design review ([architecture.pdf](architecture.pdf), §12) listed 20 findings, L1–L20, from reading the code of Yamini's branches. Since then the stack has been built on Windows and tested. The main test ran all 34 models of the llama.cpp OpenVINO backend's validated list on ggml's CPU and Vulkan backends, on a Core Ultra 7 268V with an Arc 140V (Lunar Lake): see the [test report](../reports/lunarlake_core-ultra-7-268v/TEST_REPORT.md).
+
+This document gives the current status of each finding, the bugs fixed along the way, and the new gaps the tests uncovered.
+
+Severity, as in the review: **P0** wrong results or memory corruption; **P1** blocks a realistic use case, or a major gap; **P2** robustness, performance or process; **P3** hygiene.
+
+## 1. Fixed since the review
+
+The fixes are on branches of the taste1981 forks, as pull requests to Yamini's repositories or ready for one. Until they're merged, [BUILD.md](../BUILD.md) explains how to build with them.
+
+| Problem | Effect | Fix | Where |
+| :-- | :-- | :-- | :-- |
+| L11: GGUF offsets go through `fseek(long)` | models above 2 GB failed to load on Windows | 64-bit seeks | ynimmaga/openvino #101 |
+| `.patch` files checked out with CRLF | the configure step failed on Windows, because `git apply` rejects them | `*.patch text eol=lf` | openvino #101, openvino.genai #1 |
+| ggml built with MSVC's OpenMP | the process crashed at exit, when `vcomp140.dll` was unloaded under live threads | `GGML_OPENMP=OFF` on Windows | openvino #101 |
+| llama.cpp's new mixed token/embedding inputs | the loader took `inp_mixed_slots` for the KV index, so decoding crashed at the second token | don't give `inp_mixed*` a KV role | openvino #102 |
+| graph inputs no runner writes | they held whatever memory contained; Vulkan memory isn't zeroed | zero the input buffer at load | openvino #102 |
+| out of GPU memory | an access violation instead of an error | `compile_model` throws "not enough memory on …" | openvino #102 |
+| llama.cpp's new `inp_scale_rows` input | Gemma 3 and Gemma 4 generated only padding: no runner wrote the input, so the embeddings were multiplied by zero | the dumper writes it into the artifact as a constant | ggml-cgraph-generator, branch `dump_scale_rows_constant` |
+| the generator built only through `build.sh` | no Windows build | cross-platform CMake build | ggml-cgraph-generator #1 |
+
+## 2. The review's findings now
+
+| ID | Finding | Sev | Status | Evidence from testing |
+| :-- | :-- | :-: | :-- | :-- |
+| L1 | Sliding-window attention: the decoders write one full-causal mask to every window | P0 | **open, not yet testable** | Prompt plus answer stays under 100 tokens and the artifacts hold 512 KV entries, while the tested models' windows are 512 tokens or more (Gemma 3 and 4). Testing it needs a model with a short window, such as gpt-oss (128 tokens), or artifacts with a larger KV cache. The dumps keep llama.cpp's `swa_full=true`, so there's no out-of-bounds access. |
+| L2 | Weights uploaded again for every compiled model (VLM twice, Whisper three times) | P1 | open | Not measured: the tests ran LLMs only. |
+| L3 | Most of the plugin contract unimplemented | P1 | open | The LLM pipelines work through `compile_model(path)` and GenAI's `InferRequest` and `CompiledModel` constructors. Every load parses the JSON and uploads the weights again; there's no model cache. |
+| L4 | One runner and one KV state per compiled model | P1 | open | Not exercised: the tests use one pipeline per process. |
+| L5 | Paged mode relies on GenAI internals | P1 | open | The paged path works on the CPU backend, with and without an 8-token `ALL_LOGITS` bucket, for Llama-3.2-1B, Qwen3-0.6B and 1.7B, and Qwen2.5-1.5B. The package's tests don't cover it, and it hasn't run on a GPU. |
+| L6 | Per-architecture host logic in the plugin | P1 | open | Gemma's new `inp_scale_rows` input is architecture-specific. The dumper now stores it as a constant, so the plugin needed no change. That works for any input whose value is fixed for a given graph. |
+| L7 | Prefill buckets of 16 tokens or more unusable | P1 | **workaround found; the main prefill gap** | A CPU-only llama.cpp dumps `N_TOKENS=16` without the scheduler's weight copies, as the review suspected; the package's artifacts are dumped that way. Buckets of 16 tokens or more are not yet tested end to end. On the Arc 140V, OpenVINO's GPU plugin reaches the first token 1.7× faster than the GGML path with its 8-token bucket. |
+| L8 | Shape-static artifacts | P1 | open | The tested artifacts hold 512 KV entries, so prompt plus answer must stay under 512 tokens. |
+| L9 | Serialised execution | P2 | open | Not measured: the tests ran LLMs only. Decoder prefill without a bucket also runs one token per graph run; on the Arc 140V that is 3.7× slower than with the 8-token bucket. |
+| L10 | Malformed artifacts abort the process | P2 | open | Not tested. |
+| L11 | 2 GB limit on Windows | P2 | **fixed** | #101. Models up to 7.1 GiB load on Windows. |
+| L12 | Coupled to upstream versions | P1 | **confirmed, worse** | Artifacts from llama.cpp b12304 broke the replay twice, once with a crash and once with silently wrong output (§1). Nothing in an artifact records which llama.cpp produced it. |
+| L13 | Patched ggml under ggml's usual names | P2 | open | Not hit in these tests. |
+| L14 | CPU fallback copies device-resident inputs | P2 | open | Not measured. |
+| L15 | No tests, CI, samples or user docs | P2 | **partly addressed** | This repository has a test driver, scripts, a README, a build guide and test reports. Upstream, `END_TO_END.md` still describes the deleted classes, and there is no CI. |
+| L16 | Debug hooks always compiled in | P3 | open | `GGML_REF` located the Gemma bug: the first decode step's cosine similarity to llama.cpp was 0, and 0.9999 after the fix. Keep it, behind an explicit option. |
+| L17 | VLM path covers LLaVA and InternVL only | P2 | open | Not tested. |
+| L18 | Device model: one OpenVINO device, ggml backend chosen by a string | P3 | open | On the Lunar Lake machine, Vulkan lists the Arc 140V twice (`Vulkan0`, `Vulkan1`), and nothing in OpenVINO shows which name is which device. |
+| L19 | Silent input binding | P2 | **confirmed** | `inp_scale_rows`, an input the runners don't know, stayed unwritten, and every Gemma model generated padding without an error. A load-time check that each graph input is written by a runner or stored as a constant would have reported it. |
+| L20 | Trailing zero op_params replayed as defaults | P3 | open | Latent; not seen. |
+
+## 3. New gaps found by testing
+
+| ID | Area | Gap | Evidence | Suggested fix | Sev |
+| :-- | :-- | :-- | :-- | :-- | :-: |
+| N1 | GenAI | GGUF models don't stop at their end-of-turn token: GenAI's GGUF path stops only at `eos_token_id`. | Gemma 4 (`<turn|>`, id 106) and the Phi models (`<|end|>`) run past their answers. The test driver's `STOP_IDS=` option works around it. | Detect end-of-generation tokens the way llama.cpp does, and add them to the stop tokens. | P1 |
+| N2 | GPU | Gemma-4 E2B and E4B fail at load on the Arc 140V, without an error message. | They run on the CPU, and gemma-4-12B runs on the same GPU. Their per-layer embedding table is a single tensor of 1.8 or 2.2 GiB. | Confirm with the run logs and the driver's buffer limits. Then split the tensor, or keep it on the CPU. | P1 |
+| N3 | Prefill | Recurrent models can't use prefill buckets at all, because padding rows would enter their state. | The 4 Qwen3.5 models prefill one token per graph run. | Use a bucket when a chunk fills it exactly, and the 1-token graph for the rest. | P2 |
+| N4 | Loader | ggml's CPU backend runs with its default of 4 threads. | The loader never sets it, whatever the core count. On the 8-core Lunar Lake, GGML CPU still decodes 1.6× faster than OpenVINO's CPU plugin; on larger CPUs, 4 threads leave most cores idle. | Set the thread count, by default to the number of physical cores, and make it a property. | P2 |
+| N5 | Fallback | No automatic fallback when the GPU can't hold a model; `compile_model` now fails cleanly instead. | The loader allocates every weight on the chosen backend, and with #102 a failed allocation throws. | Retry on the CPU backend, or keep the tensors that don't fit on the CPU, and report it. A "fallback" device needs this. | P2 |
+| N6 | GPU | An apparent fixed cost of about 8–10 ms per token on the Arc 140V, in both the GGML path and OpenVINO's GPU plugin. | Below about 0.5 GiB, models decode faster on the CPU (granite-4.0-350m: 8.2 ms on the GPU, 6.2 on the CPU). The run was over Remote Desktop. | Measure on a local session. If it persists, profile submission and synchronization. | P2 |
+| N7 | GPU | ggml's Vulkan backend creates its shader pipelines on first use. | Cold first tokens are slow. This is also the "per-decode-step cost" with several buckets that the generator's `END_TO_END.md` mentions: warm, TPOT is the same with and without buckets. | Run each graph once in `compile_model`. | P2 |
+| N8 | Quality | Only agreement has been checked, not accuracy. | The tests compare output text between paths. `GGML_REF` checked the first decode step against llama.cpp for two Gemma models. | Compare perplexity or benchmark scores with llama.cpp's. | P2 |
+| N9 | OpenVINO | OpenVINO's GPU plugin also lists non-Intel OpenCL GPUs, then fails on them. | It lists an NVIDIA GPU through NVIDIA's OpenCL driver, and inference there fails with a Broadcast shape error. | A fallback policy must use OpenVINO's GPU plugin only on Intel GPUs, and ggml's Vulkan backend elsewhere. | P3 |
+| N10 | Coverage | GenAI's own GGUF path loads 16 of the 34 validated models. | It rejects 7 for their architecture and 11 for their tensor types. | None for the GGML device, which runs all 34. This is its main value next to the native path. | — |
+
+## 4. Suggested priorities
+
+1. **Make the artifact contract robust** (L12, L19, L6). Record the producer (the llama.cpp version) in each artifact, and check at load that every graph input is bound. An unknown input should fail with a clear message, not produce wrong output.
+2. **Prefill performance** (L7, N3). Dump and test 16- to 64-token buckets, and let recurrent models use exactly filled buckets.
+3. **Gemma-4 per-layer embeddings on Intel GPUs** (N2).
+4. **Stop tokens in GenAI's GGUF path** (N1).
+5. **Fallback behavior and defaults**: retry on the CPU (N5), thread count (N4), warm-up at load (N7).
+6. **Correctness beyond short prompts**: sliding windows (L1), several requests per model (L4), weight sharing (L2), accuracy (N8).

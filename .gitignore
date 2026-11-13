@@ -1,0 +1,6 @@
+# bin\ is distributed in the release zip, not in git
+bin/
+models/*
+!models/manifest.json
+results/
+__pycache__/
