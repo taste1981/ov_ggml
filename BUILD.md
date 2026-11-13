@@ -50,13 +50,13 @@ A laptop takes several times longer. Use a short root folder such as `C:\ov`, be
 
 ## 2. Get the sources
 
-Several Windows fixes are in pull requests to Yamini's repositories that may not be merged yet. Until they are, start from the `taste1981` branches, which contain them:
+Several Windows fixes are in pull requests to Yamini's repositories that may not be merged yet; [PR_GATEKEEPING.md](PR_GATEKEEPING.md) lists them. Until they are merged, start from the `taste1981` branches, which contain them:
 
 | Repository | Branch to use now | Contains | Once the PRs are merged |
 | :-- | :-- | :-- | :-- |
 | OpenVINO | `taste1981/openvino` `ggml_plugin_windows`, plus a merge of `ggml_plugin_mixed_batch` | `ynimmaga/openvino` `ggml_plugin` + #101 + #102 | `ynimmaga/openvino` `ggml_plugin` |
 | GenAI | `taste1981/openvino.genai` `ggml_adapter_windows` | `ynimmaga/openvino.genai` `ggml_adapter` + #1 | `ynimmaga/openvino.genai` `ggml_adapter` |
-| generator | `taste1981/ggml-cgraph-generator` `cmake-cross-platform`, plus a merge of `dump_scale_rows_constant` | `plugin_artifacts` + #1 + the inp_scale_rows fix | `ynimmaga/ggml-cgraph-generator` `plugin_artifacts` |
+| generator | `taste1981/ggml-cgraph-generator` `cmake-cross-platform`, plus a merge of `dump_scale_rows_constant` | `plugin_artifacts` + #1 + #2 | `ynimmaga/ggml-cgraph-generator` `plugin_artifacts` |
 
 Start OpenVINO from `ggml_plugin_windows`, not from Yamini's `ggml_plugin` with the fix pulled in afterwards. That branch makes git write the `.patch` files with LF line endings, and a checkout made before that rule was in place keeps CRLF; see the Windows notes at the end.
 

@@ -17,6 +17,7 @@ The models are the Q4_K_M files from the "Validated Models" table of the llama.c
 - [Gap analysis](docs/GAP_ANALYSIS.md): the design review's findings after these tests, and the new gaps the tests found.
 - [Architecture and design review](docs/architecture.pdf) of the GGML device, its GenAI integration and the artifact dumper. It is also in [HTML](docs/architecture.html); download that to view it in a browser.
 - [BUILD.md](BUILD.md): how to build everything from source on Windows.
+- [PR_GATEKEEPING.md](PR_GATEKEEPING.md): the pull requests to Yamini's repositories that this package needs, and their status.
 
 The GitHub repository doesn't store `bin\`. The release zip `ggml_ov_test.zip`, on the repository's [Releases](https://github.com/taste1981/ov_ggml/releases) page, holds the whole package, `bin\` included.
 
@@ -38,6 +39,7 @@ docs\         gap analysis; architecture and design review (PDF, HTML)
 src\ggml_llm\ driver source (C++, CMake)
 src\genai_samples\  CMake wrapper that builds GenAI's text-generation samples (see BUILD.md)
 BUILD.md      how to build all of this from source
+PR_GATEKEEPING.md  the pull requests this package needs
 ```
 
 ## Requirements

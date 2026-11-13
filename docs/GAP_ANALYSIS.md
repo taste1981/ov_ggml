@@ -8,7 +8,7 @@ Severity, as in the review: **P0** wrong results or memory corruption; **P1** bl
 
 ## 1. Fixed since the review
 
-The fixes are on branches of the taste1981 forks, as pull requests to Yamini's repositories or ready for one. Until they're merged, [BUILD.md](../BUILD.md) explains how to build with them.
+The fixes are in pull requests to Yamini's repositories, listed in [PR_GATEKEEPING.md](../PR_GATEKEEPING.md). Until they're merged, [BUILD.md](../BUILD.md) explains how to build with them.
 
 | Problem | Effect | Fix | Where |
 | :-- | :-- | :-- | :-- |
@@ -18,7 +18,7 @@ The fixes are on branches of the taste1981 forks, as pull requests to Yamini's r
 | llama.cpp's new mixed token/embedding inputs | the loader took `inp_mixed_slots` for the KV index, so decoding crashed at the second token | don't give `inp_mixed*` a KV role | openvino #102 |
 | graph inputs no runner writes | they held whatever memory contained; Vulkan memory isn't zeroed | zero the input buffer at load | openvino #102 |
 | out of GPU memory | an access violation instead of an error | `compile_model` throws "not enough memory on …" | openvino #102 |
-| llama.cpp's new `inp_scale_rows` input | Gemma 3 and Gemma 4 generated only padding: no runner wrote the input, so the embeddings were multiplied by zero | the dumper writes it into the artifact as a constant | ggml-cgraph-generator, branch `dump_scale_rows_constant` |
+| llama.cpp's new `inp_scale_rows` input | Gemma 3 and Gemma 4 generated only padding: no runner wrote the input, so the embeddings were multiplied by zero | the dumper writes it into the artifact as a constant | ggml-cgraph-generator #2 |
 | the generator built only through `build.sh` | no Windows build | cross-platform CMake build | ggml-cgraph-generator #1 |
 
 ## 2. The review's findings now

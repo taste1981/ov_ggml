@@ -23,7 +23,7 @@ Driver  bin/ggml_llm.exe, source in src/ggml_llm (CMake: -DOpenVINO_DIR=<openvin
 
 Artifacts  artifacts/<model>/d1.json (1 token per step) and d8.json (8-token prefill bucket), n_kv = 512
   Dumped by ynimmaga/ggml-cgraph-generator plugin_artifacts @ 3dd59e1 + 8a43f55 (CMake build, PR #1)
-  + ca3e062 (inp_scale_rows as a constant; PR D, branch dump_scale_rows_constant; changes only the Gemma artifacts),
+  + ca3e062 (inp_scale_rows as a constant; PR #2, branch dump_scale_rows_constant; changes only the Gemma artifacts),
   linked against a CPU-only llama.cpp b12304-11-gdd6b945be.
   Models: the Q4_K_M files of the llama.cpp OpenVINO backend's "Validated Models" table
   (ravi9/llama.cpp dev_backend_openvino, docs/backend/OPENVINO.md); exact files in models/manifest.json.
