@@ -178,5 +178,10 @@
   "repo": "gpustack/bge-m3-GGUF",
   "path": "bge-m3-Q4_K_M.gguf",
   "size": 437778496
+ },
+ {
+  "repo": "unsloth/gpt-oss-20b-GGUF",
+  "path": "gpt-oss-20b-Q4_K_M.gguf",
+  "size": 11624759488
  }
 ]

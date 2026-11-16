@@ -20,12 +20,14 @@ The fixes are in pull requests to Yamini's repositories, listed in [PR_GATEKEEPI
 | out of GPU memory | an access violation instead of an error | `compile_model` throws "not enough memory on …" | openvino #102 |
 | llama.cpp's new `inp_scale_rows` input | Gemma 3 and Gemma 4 generated only padding: no runner wrote the input, so the embeddings were multiplied by zero | the dumper writes it into the artifact as a constant | ggml-cgraph-generator #2 |
 | the generator built only through `build.sh` | no Windows build | cross-platform CMake build | ggml-cgraph-generator #1 |
+| L1: the artifact cannot tell the full and sliding-window masks apart (same name, same shape) | the decoders wrote one full-causal mask to every layer; SWA layers attended beyond their window and the output collapsed once the sequence passed n_swa | the dumper records `mask_roles` per windowed mask leaf, derived from llama.cpp's own filled mask values | ggml-cgraph-generator #3 |
+| L1: the loader exposed one mask leaf under several input aliases, and the runners write every alias | the windowed mask was overwritten by a full-causal write through the second alias (last write wins), defeating the fix | the window is mapped onto every alias of the leaf; a swa_full=false dump (masks of unequal width) is refused with a clean error | openvino #103 |
 
 ## 2. The review's findings now
 
 | ID | Finding | Sev | Status | Evidence from testing |
 | :-- | :-- | :-: | :-- | :-- |
-| L1 | Sliding-window attention: the decoders write one full-causal mask to every window | P0 | **open, not yet testable** | Prompt plus answer stays under 100 tokens and the artifacts hold 512 KV entries, while the tested models' windows are 512 tokens or more (Gemma 3 and 4). Testing it needs a model with a short window, such as gpt-oss (128 tokens), or artifacts with a larger KV cache. The dumps keep llama.cpp's `swa_full=true`, so there's no out-of-bounds access. |
+| L1 | Sliding-window attention: the decoders write one full-causal mask to every window | P0 | **fixed, verified 2026-11-16** | The generator now records the windowed mask in the artifact (`mask_roles`, derived from llama.cpp's own filled mask values at the deepest dump position), the loader maps it onto every alias of the leaf, and the decoder/paged runners leave the cells older than the window at -inf. Verified on gemma-3-4b re-dumped at n_kv=2048 (window 1024): the replay's written mask shows exactly 1024 visible cells at position 1223, byte-structure equal to llama.cpp's REF_OUT oracle; text matches llama-cli at 1288 prompt tokens (".cpp" spam before the fix, "Okay, here's a breakdown…" after), and the collapse at ~1230 tokens that the bug caused is gone. gpt-oss-20b (window 128) artifacts at n_kv=512 carry `mask_roles` window 128. The fix also refuses `swa_full=false` dumps (masks of unequal width) with a clean error instead of an out-of-bounds write. |
 | L2 | Weights uploaded again for every compiled model (VLM twice, Whisper three times) | P1 | open | Not measured: the tests ran LLMs only. |
 | L3 | Most of the plugin contract unimplemented | P1 | open | The LLM pipelines work through `compile_model(path)` and GenAI's `InferRequest` and `CompiledModel` constructors. Every load parses the JSON and uploads the weights again; there's no model cache. |
 | L4 | One runner and one KV state per compiled model | P1 | open | Not exercised: the tests use one pipeline per process. |
@@ -68,4 +70,4 @@ The fixes are in pull requests to Yamini's repositories, listed in [PR_GATEKEEPI
 3. **Gemma-4 per-layer embeddings on Intel GPUs** (N2).
 4. **Stop tokens in GenAI's GGUF path** (N1).
 5. **Fallback behavior and defaults**: retry on the CPU (N5), thread count (N4), warm-up at load (N7).
-6. **Correctness beyond short prompts**: sliding windows (L1), several requests per model (L4), weight sharing (L2), accuracy (N8).
+6. **Correctness beyond short prompts**: sliding windows (L1, done 2026-11-16), several requests per model (L4), weight sharing (L2), accuracy (N8).
