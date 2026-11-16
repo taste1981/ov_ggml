@@ -48,6 +48,10 @@ int main(int argc, char* argv[]) try {
     int compile_runs = 0;
     bool release = false;
     std::string art2;
+    bool two_pipe = false;
+    std::string second_prompt;
+    std::string third_prompt;  // two-pipe: generate again on pipe 0 AFTER pipe 1 ran (continuation)
+    std::string chat2;         // single-pipe baseline: generate again on the same pipeline
     for (int i = 5; i < argc; ++i) {
         const std::string kv = argv[i];
         const auto eq = kv.find('=');
@@ -77,6 +81,22 @@ int main(int argc, char* argv[]) try {
             release = kv.substr(eq + 1) != "0";
             continue;
         }
+        if (kv.substr(0, eq) == "TWO_PIPE") {  // two pipelines over ONE compiled model (L4 test)
+            two_pipe = kv.substr(eq + 1) != "0";
+            continue;
+        }
+        if (kv.substr(0, eq) == "SECOND_PROMPT") {  // prompt for the second TWO_PIPE pipeline
+            second_prompt = kv.substr(eq + 1);
+            continue;
+        }
+        if (kv.substr(0, eq) == "THIRD_PROMPT") {  // TWO_PIPE: continuation on pipe 0 after pipe 1
+            third_prompt = kv.substr(eq + 1);
+            continue;
+        }
+        if (kv.substr(0, eq) == "CHAT2") {  // single-pipe baseline: second generate on the same pipeline
+            chat2 = kv.substr(eq + 1);
+            continue;
+        }
         properties[kv.substr(0, eq)] = kv.substr(eq + 1);
     }
 
@@ -92,6 +112,59 @@ int main(int argc, char* argv[]) try {
             compiled.push_back(core.compile_model(path, "GGML", properties));
             const double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - c0).count();
             std::cout << "compile " << i << " " << path << ": " << ms << " ms, RSS " << rss_mb() << " MB\n";
+        }
+        return 0;
+    }
+
+    // TWO_PIPE: one compile_model, two independent pipelines over it (each request must carry
+    // its own KV state). Generates model0 then model1; each streamed text is bracketed by
+    // "@@modelN" / "@@modelN end" markers so a test can compare against the single-pipeline runs
+    // (which must be separate processes -- a second generate on one pipeline is a chat
+    // continuation, not a fresh sequence).
+    if (two_pipe) {
+        if (second_prompt.empty()) {
+            throw std::invalid_argument("TWO_PIPE needs SECOND_PROMPT=<prompt>");
+        }
+        const auto t0 = std::chrono::steady_clock::now();
+        ov::Core core;
+        auto compiled = core.compile_model(target, "GGML", properties);
+        ov::genai::Tokenizer tokenizer(gguf);
+        std::vector<std::unique_ptr<ov::genai::LLMPipeline>> pipes;
+        for (int i = 0; i < 2; ++i) {
+            if (properties.count("GGML_PAGED")) {
+                pipes.push_back(std::make_unique<ov::genai::LLMPipeline>(compiled, tokenizer,
+                                                                         ov::genai::SchedulerConfig{}, config));
+            } else {
+                pipes.push_back(std::make_unique<ov::genai::LLMPipeline>(compiled.create_infer_request(), tokenizer, config));
+            }
+        }
+        const double load_ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
+        const std::vector<std::string> prompts = {prompt, second_prompt};
+        for (int i = 0; i < 2; ++i) {
+            std::cout << "@@model" << i << "\n";
+            auto streamer = [](std::string subword) {
+                std::cout << subword << std::flush;
+                return ov::genai::StreamingStatus::RUNNING;
+            };
+            auto result = pipes[i]->generate(prompts[i], config, streamer);
+            auto& m = result.perf_metrics;
+            std::cout << "\n@@model" << i << " end\n";
+            std::cout << "load " << load_ms << " ms, prompt " << m.get_num_input_tokens() << " tokens, generated "
+                      << m.get_num_generated_tokens() << " tokens\n";
+        }
+        if (!third_prompt.empty()) {
+            // Pipe 0 continues AFTER pipe 1 ran -- with one shared runner, pipe 1's prefill has
+            // overwritten pipe 0's KV slots; the continuation must stay clean for L4 to pass.
+            std::cout << "@@model0b\n";
+            auto streamer = [](std::string subword) {
+                std::cout << subword << std::flush;
+                return ov::genai::StreamingStatus::RUNNING;
+            };
+            auto result = pipes[0]->generate(third_prompt, config, streamer);
+            auto& m = result.perf_metrics;
+            std::cout << "\n@@model0b end\n";
+            std::cout << "load " << load_ms << " ms, prompt " << m.get_num_input_tokens() << " tokens, generated "
+                      << m.get_num_generated_tokens() << " tokens\n";
         }
         return 0;
     }
@@ -127,6 +200,14 @@ int main(int argc, char* argv[]) try {
     std::cout << "\n\nload " << load_ms << " ms, prompt " << m.get_num_input_tokens() << " tokens, generated "
               << m.get_num_generated_tokens() << " tokens, TTFT " << m.get_ttft().mean << " ms, TPOT "
               << m.get_tpot().mean << " ms, " << m.get_throughput().mean << " tokens/s" << std::endl;
+    if (!chat2.empty()) {
+        // Baseline for TWO_PIPE's THIRD_PROMPT: a chat continuation on the same pipeline.
+        std::cout << "@@chat2\n";
+        auto result2 = pipe->generate(chat2, config, streamer);
+        std::cout << "\n@@chat2 end\n";
+        std::cout << "chat2 prompt " << result2.perf_metrics.get_num_input_tokens() << " tokens, generated "
+                  << result2.perf_metrics.get_num_generated_tokens() << " tokens" << std::endl;
+    }
     return 0;
 } catch (const std::exception& e) {
     std::cerr << "\nerror: " << e.what() << "\n";
