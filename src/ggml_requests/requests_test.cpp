@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <fstream>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -52,6 +53,8 @@ int main(int argc, char* argv[]) try {
     ov::Core core;
     ov::AnyMap properties{{"GGML_WEIGHTS", argv[1]}};
     bool construct_only = false;
+    std::string prompt_ids_file, logits_out;
+    int gen = 0;
     for (int i = 3; i < argc; ++i) {
         const std::string kv = argv[i];
         const std::string key = kv.substr(0, kv.find('='));
@@ -60,9 +63,56 @@ int main(int argc, char* argv[]) try {
             construct_only = value != "0";
             continue;
         }
+        if (key == "PROMPT_IDS") {
+            prompt_ids_file = value;
+            continue;
+        }
+        if (key == "LOGITS_OUT") {
+            logits_out = value;
+            continue;
+        }
+        if (key == "GEN") {
+            gen = std::stoi(value);
+            continue;
+        }
         properties[key] = value;
     }
     auto compiled = core.compile_model(argv[2], "GGML", properties);
+
+    // Long-sequence mode (L8): prefill the whole token list in one infer() -- the runner
+    // chunks internally and wraps KV slots once the sequence passes the capacity -- and dump
+    // the logits row of the last position for comparison against llama.cpp.
+    if (!prompt_ids_file.empty()) {
+        std::ifstream f(prompt_ids_file);
+        std::vector<int64_t> ids;
+        for (int64_t id; f >> id;) {
+            ids.push_back(id);
+        }
+        if (ids.empty()) {
+            std::cerr << "no ids in " << prompt_ids_file << "\n";
+            return 1;
+        }
+        std::cout << "GGML_KV_CAPACITY " << compiled.get_property("GGML_KV_CAPACITY").as<uint64_t>() << std::endl;
+        auto req = compiled.create_infer_request();
+        auto logits = step(req, ids, ids.size());
+        const size_t arg = argmax(logits);
+        std::cout << "prompt " << ids.size() << " tokens, argmax " << arg << std::endl;
+        if (!logits_out.empty()) {
+            std::ofstream o(logits_out, std::ios::binary);
+            o.write(reinterpret_cast<const char*>(logits.data()), logits.size() * sizeof(float));
+        }
+        // Greedy continuation: decode GEN tokens from the same (ringed) state, printing each id.
+        size_t next = argmax(logits);
+        for (int g = 0; g < gen; ++g) {
+            logits = step(req, {static_cast<int64_t>(next)}, ids.size() + g + 1);
+            next = argmax(logits);
+            std::cout << next << " ";
+        }
+        if (gen) {
+            std::cout << "\n";
+        }
+        return 0;
+    }
 
     if (construct_only) {
         // Exercise the per-request build path (whisper decoders build a fresh cross graph per
