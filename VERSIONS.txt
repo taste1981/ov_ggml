@@ -9,6 +9,9 @@ OpenVINO  ynimmaga/openvino ggml_plugin @ c6922d55 + local branch ggml_plugin_wi
   3f184d5a ggml_cgraph_loader: fail cleanly when the backend runs out of memory          (PR #102)
   321be1e7 ggml_cgraph_loader: window attention masks marked by the artifact's mask_roles  (PR #103)
   65f4bd98 ggml plugin: write windowed masks for sliding-window attention layers          (PR #103)
+  3b1400ab ggml_cgraph_loader: CacheMode -- share weights, optionally fresh caches        (PR #104)
+  6dcba752 ggml plugin: upload each GGUF once -- per-(weights, backend) registry          (PR #104)
+  bc7fed7c ggml plugin: whisper cross graph shares the decoder's weight upload            (PR #104)
   CMake: -DENABLE_GGML_CGRAPH_LOADER=ON -DENABLE_GGML_VULKAN=ON -DENABLE_INTEL_GPU=ON -DENABLE_INTEL_NPU=OFF
          (GPU plugin: GPU_RT_TYPE=OCL, ENABLE_ONEDNN_FOR_GPU=ON, bundled OpenCL ICD loader)
          -DENABLE_AUTO=OFF -DENABLE_AUTO_BATCH=OFF -DENABLE_PYTHON=OFF -DENABLE_TESTS=OFF

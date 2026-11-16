@@ -4,6 +4,12 @@
 // usage: ggml_llm <model.gguf> <artifact.json|device> "<prompt>" [max_new_tokens] [GGML_KEY=value ...]
 //   e.g. GGML_BACKEND=Vulkan0, GGML_BUCKETS=8:decoder_b8.json, GGML_PAGED=YES (continuous batching);
 //   STOP_IDS=106,1 sets GenAI stop tokens instead; WARMUP=1 runs an untimed generate first.
+//
+// Compile-only mode (no generate): COMPILE_RUNS=N compiles the artifact N times, printing load
+// time and process RSS per compile; ART2=<artifact.json> makes every run after the first compile
+// ART2 instead (same GGML_WEIGHTS), so a weight-sharing change shows up as a short second
+// compile with flat RSS. Compiled models are kept alive unless RELEASE=1, which drops them
+// between runs and so re-uploads every time.
 
 #include <chrono>
 #include <iostream>
@@ -11,8 +17,22 @@
 #include <sstream>
 #include <string>
 
+#ifndef NOMINMAX
+#define NOMINMAX  // windows.h defines min/max macros that collide with the OpenVINO headers
+#endif
+#include <windows.h>
+#include <psapi.h>
+
 #include "openvino/genai/llm_pipeline.hpp"
 #include "openvino/runtime/core.hpp"
+
+namespace {
+double rss_mb() {
+    PROCESS_MEMORY_COUNTERS c{};
+    GetProcessMemoryInfo(GetCurrentProcess(), &c, sizeof(c));
+    return static_cast<double>(c.WorkingSetSize) / (1024.0 * 1024.0);
+}
+}  // namespace
 
 int main(int argc, char* argv[]) try {
     if (argc < 4) {
@@ -25,6 +45,9 @@ int main(int argc, char* argv[]) try {
     config.max_new_tokens = argc > 4 ? std::stoul(argv[4]) : 32;
     ov::AnyMap properties{{"GGML_WEIGHTS", gguf}};
     bool warmup = false;
+    int compile_runs = 0;
+    bool release = false;
+    std::string art2;
     for (int i = 5; i < argc; ++i) {
         const std::string kv = argv[i];
         const auto eq = kv.find('=');
@@ -42,7 +65,35 @@ int main(int argc, char* argv[]) try {
             warmup = kv.substr(eq + 1) != "0";
             continue;
         }
+        if (kv.substr(0, eq) == "COMPILE_RUNS") {  // compile-only mode, see the header comment
+            compile_runs = std::stoi(kv.substr(eq + 1));
+            continue;
+        }
+        if (kv.substr(0, eq) == "ART2") {  // compile this artifact on every run after the first
+            art2 = kv.substr(eq + 1);
+            continue;
+        }
+        if (kv.substr(0, eq) == "RELEASE") {  // drop compiled models between runs (re-upload each time)
+            release = kv.substr(eq + 1) != "0";
+            continue;
+        }
         properties[kv.substr(0, eq)] = kv.substr(eq + 1);
+    }
+
+    if (compile_runs > 0) {
+        ov::Core core;
+        std::vector<ov::CompiledModel> compiled;
+        for (int i = 0; i < compile_runs; ++i) {
+            if (release) {
+                compiled.clear();  // the registry entry expires with the model
+            }
+            const std::string path = i > 0 && !art2.empty() ? art2 : target;
+            const auto c0 = std::chrono::steady_clock::now();
+            compiled.push_back(core.compile_model(path, "GGML", properties));
+            const double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - c0).count();
+            std::cout << "compile " << i << " " << path << ": " << ms << " ms, RSS " << rss_mb() << " MB\n";
+        }
+        return 0;
     }
 
     const auto t0 = std::chrono::steady_clock::now();
