@@ -2,6 +2,14 @@
 
 Latest recorded batch for each model and quantization as of 2026-11-19. Batch IDs identify the source summaries in `llama-work-note/results/compare-gpu-4paths`.
 
+## Tested models
+
+- [Llama-3.2-1B-Instruct Q4_0 (requantized)](#q4_0-requantized)
+- [Llama-3.2-1B-Instruct Q4_K_M](#q4_k_m)
+- [Qwen3-4B Q4_K_M](#qwen3-4b-q4_k_m)
+- [Qwen3.5-4B Q4_K_M](#qwen35-4b-q4_k_m)
+- [Gemma-4-12B-IT Q4_K_M](#gemma-4-12b-it-q4_k_m)
+
 ## Shared configuration
 
 - Windows, Intel Core Ultra 9 285K. All paths target its Intel integrated GPU: `Vulkan1` for Vulkan and `GPU.0` for OpenVINO.
