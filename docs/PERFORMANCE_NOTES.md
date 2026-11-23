@@ -26,6 +26,19 @@ All runs target the Intel integrated GPU on a Windows system with a Core Ultra 9
 
 **Reading the tables:** Values are medians of the measured runs. **TTFT (ms)** is prompt inference time up to the first token's logits; **TPOT (ms/token)** is inference time per subsequent token. The timings use llama.cpp's prompt/eval times and GenAI's raw inference durations, excluding model loading, sampling, and pipeline overhead. Ratios use llama.cpp + Vulkan as `1.00x` for the same model, prompt, and metric. Prompt labels are nominal; the prompt-token tables show actual counts, with `-` indicating no recorded count.
 
+## Short-prompt bucket sensitivity
+
+On 2026-11-23, only **GenAI + Vulkan** was rerun on `Vulkan1` with the same builds and `n_kv=4096`. Within each model, all five configurations used identical input token IDs for `The capital of France is`. Values are inference TTFT medians in milliseconds after one warm-up and five measured runs per configuration.
+
+| Model (Q4_K_M) | Input tokens | `b1` only | `b1+b8` | `b1+b32` | `b1+b1024` | `b1+b8+b1024` |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Llama-3.2-1B-Instruct | 6 | 155.2 | 32.2 | 114.9 | 1351.9 | 32.0 |
+| Qwen3-4B | 5 | 340.0 | 94.1 | 395.0 | 4909.3 | 92.1 |
+
+Adding `b8` alongside `b1024` brought short-prompt TTFT close to the `b1+b8` result for both models. With both buckets configured, the selection rule picks `b8` for these prompts, padding 2 rows for Llama and 3 for Qwen; `b1024` would pad 1018 and 1019 rows, respectively. These selections are inferred from the code, not directly logged. Within each model, the 32 output token IDs logged for the final measured run matched across all five configurations.
+
+The roughly 54x and 69x short-prompt TTFT ratios in the four-path tables below apply to the original `b1+b1024` configuration. This follow-up does not update those ratios or measure longer prompts.
+
 ## Llama-3.2-1B-Instruct Q4_K_M
 
 Batch: `20261120-201355`. All four paths completed.
