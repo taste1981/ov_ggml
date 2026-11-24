@@ -1,10 +1,11 @@
 # Performance notes: Four GGUF paths on Intel integrated graphics
 
-Six Q4_K_M models were measured on 2026-11-20. Batch IDs identify the source summaries in `llama-work-note/results/compare-gpu-4paths`.
+Seven Q4_K_M models were measured across the 2026-11-20 and 2026-11-23 batches. Batch IDs identify the source summaries in `llama-work-note/results/compare-gpu-4paths`.
 
 ## Tested models
 
 - [Llama-3.2-1B-Instruct Q4_K_M](#llama-32-1b-instruct-q4_k_m)
+- [Llama-3.1-8B-Instruct Q4_K_M](#llama-31-8b-instruct-q4_k_m)
 - [Qwen3-4B Q4_K_M](#qwen3-4b-q4_k_m)
 - [Qwen3.5-4B Q4_K_M](#qwen35-4b-q4_k_m)
 - [Gemma-4-E2B-IT Q4_K_M](#gemma-4-e2b-it-q4_k_m)
@@ -76,6 +77,40 @@ Reader batch: `20261123-164244`.
 | 250 | 25.0 (1.00x) | 25.9 (1.04x) | 28.4 (1.14x) | 18.4 (0.74x) | - |
 | 1000 | 26.0 (1.00x) | 41.8 (1.60x) | 30.5 (1.17x) | 19.4 (0.75x) | - |
 | 2000 | 26.9 (1.00x) | 63.9 (2.37x) | 30.3 (1.12x) | 20.8 (0.77x) | - |
+
+## Llama-3.1-8B-Instruct Q4_K_M
+
+Batch: `20261123-170740`. All five configurations completed at every prompt length.
+
+- **GenAI + OV (ovfe):** The saved samples contained garbled or repetitive text at all four prompt lengths. Timings are for reference only.
+- **llama.cpp + OV:** At prompt 250, the generated text was not identical across the five measured runs.
+
+**Prompt tokens**
+
+| Prompt | llama.cpp + Vulkan | llama.cpp + OV | GenAI + Vulkan | GenAI + OV (ovfe) | GenAI + OV (reader) |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 5 | 6 | 6 | 6 | 6 | 6 |
+| 250 | 238 | 238 | 238 | 238 | 238 |
+| 1000 | 971 | 971 | 971 | 971 | 971 |
+| 2000 | 1937 | 1937 | 1937 | 1937 | 1937 |
+
+**TTFT (ms)**
+
+| Prompt | llama.cpp + Vulkan | llama.cpp + OV | GenAI + Vulkan | GenAI + OV (ovfe) | GenAI + OV (reader) |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 5 | 125.8 (1.00x) | 191.6 (1.52x) | 8674.4 (68.95x) | 156.6 (1.24x) | 162.9 (1.30x) |
+| 250 | 2180.1 (1.00x) | 2219.9 (1.02x) | 8711.4 (4.00x) | 2056.3 (0.94x) | 2336.5 (1.07x) |
+| 1000 | 9011.2 (1.00x) | 5725.6 (0.64x) | 9265.1 (1.03x) | 5603.1 (0.62x) | 5798.1 (0.64x) |
+| 2000 | 20796.2 (1.00x) | 13825.2 (0.66x) | 21793.9 (1.05x) | 11498.7 (0.55x) | 19562.6 (0.94x) |
+
+**TPOT (ms/token)**
+
+| Prompt | llama.cpp + Vulkan | llama.cpp + OV | GenAI + Vulkan | GenAI + OV (ovfe) | GenAI + OV (reader) |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 5 | 116.9 (1.00x) | 116.0 (0.99x) | 121.5 (1.04x) | 86.2 (0.74x) | 89.9 (0.77x) |
+| 250 | 118.3 (1.00x) | 120.9 (1.02x) | 125.6 (1.06x) | 87.8 (0.74x) | 92.5 (0.78x) |
+| 1000 | 122.0 (1.00x) | 176.2 (1.44x) | 142.6 (1.17x) | 91.6 (0.75x) | 94.7 (0.78x) |
+| 2000 | 128.9 (1.00x) | 262.6 (2.04x) | 142.9 (1.11x) | 96.9 (0.75x) | 101.6 (0.79x) |
 
 ## Qwen3-4B Q4_K_M
 
