@@ -1,6 +1,6 @@
 # Performance notes: Four GGUF paths on Intel integrated graphics
 
-Seven Q4_K_M models were measured across the 2026-11-20 and 2026-11-23 batches. Batch IDs identify the source summaries in `llama-work-note/results/compare-gpu-4paths`.
+Eight Q4_K_M models were measured across the 2026-11-20, 2026-11-23, and 2026-11-24 batches. Batch IDs identify the source summaries in `llama-work-note/results/compare-gpu-4paths`.
 
 ## Tested models
 
@@ -8,6 +8,7 @@ Seven Q4_K_M models were measured across the 2026-11-20 and 2026-11-23 batches. 
 - [Llama-3.1-8B-Instruct Q4_K_M](#llama-31-8b-instruct-q4_k_m)
 - [Qwen3-4B Q4_K_M](#qwen3-4b-q4_k_m)
 - [Qwen3.5-4B Q4_K_M](#qwen35-4b-q4_k_m)
+- [Nanbeige4.2-3B Q4_K_M](#nanbeige42-3b-q4_k_m)
 - [Gemma-4-E2B-IT Q4_K_M](#gemma-4-e2b-it-q4_k_m)
 - [Gemma-4-E4B-IT Q4_K_M](#gemma-4-e4b-it-q4_k_m)
 - [Gemma-4-12B-IT Q4_K_M](#gemma-4-12b-it-q4_k_m)
@@ -180,6 +181,40 @@ Batch: `20261120-153933`.
 - **GenAI + Vulkan, no timing or text:** All four prompts exited with code `2`. The GGML runner rejected the 1024-row prefill graph because padding would update recurrent state. No one-token-only configuration was measured.
 - **GenAI + OV, timed with output errors:** The saved text samples were garbled at all four prompt lengths.
 - **llama.cpp + OV:** At prompt 5, the generated text was not identical across the five measured runs.
+
+## Nanbeige4.2-3B Q4_K_M
+
+Batch: `20261124-112312` (`Nanbeige4.2-3B-Q4_K_M/perf-compare/summary-20261124-112312.md`). Both llama.cpp paths and GenAI + Vulkan completed at all four prompt lengths.
+
+- **GenAI + OV:** Both `ovfe` and `reader` exited with code `2` before generation. The native GGUF builder and the legacy GGUF reader both rejected the `nanbeige` architecture.
+- **GenAI + Vulkan:** With the 1024-token prefill bucket, the 6-token prompt took 8015.0 ms to reach the first token. The two longer prompts had different input token counts across GenAI and llama.cpp, so their ratios compare the same prompt text, not identical token sequences. See the [saved output excerpts](../reports/arrowlake_core-ultra-9-285k/OUTPUT_NOTES.md#nanbeige42-3b-q4_k_m).
+
+**Prompt tokens**
+
+| Prompt | llama.cpp + Vulkan | llama.cpp + OV | GenAI + Vulkan | GenAI + OV (ovfe) | GenAI + OV (reader) |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 5 | 6 | 6 | 6 | - | - |
+| 250 | 234 | 234 | 234 | - | - |
+| 1000 | 979 | 979 | 985 | - | - |
+| 2000 | 1957 | 1957 | 1969 | - | - |
+
+**TTFT (ms)**
+
+| Prompt | llama.cpp + Vulkan | llama.cpp + OV | GenAI + Vulkan | GenAI + OV (ovfe) | GenAI + OV (reader) |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 5 | 119.3 (1.00x) | 231.9 (1.94x) | 8015.0 (67.17x) | Exit 2 | Exit 2 |
+| 250 | 2082.9 (1.00x) | 1976.1 (0.95x) | 8092.2 (3.89x) | Exit 2 | Exit 2 |
+| 1000 | 8880.3 (1.00x) | 7528.8 (0.85x) | 9284.0 (1.05x) | Exit 2 | Exit 2 |
+| 2000 | 23044.2 (1.00x) | 14767.1 (0.64x) | 24382.4 (1.06x) | Exit 2 | Exit 2 |
+
+**TPOT (ms/token)**
+
+| Prompt | llama.cpp + Vulkan | llama.cpp + OV | GenAI + Vulkan | GenAI + OV (ovfe) | GenAI + OV (reader) |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 5 | 108.9 (1.00x) | 131.3 (1.21x) | 115.3 (1.06x) | Exit 2 | Exit 2 |
+| 250 | 111.3 (1.00x) | 140.5 (1.26x) | 120.0 (1.08x) | Exit 2 | Exit 2 |
+| 1000 | 116.3 (1.00x) | 248.7 (2.14x) | 142.1 (1.22x) | Exit 2 | Exit 2 |
+| 2000 | 124.6 (1.00x) | 405.0 (3.25x) | 143.0 (1.15x) | Exit 2 | Exit 2 |
 
 ## Gemma-4-E2B-IT Q4_K_M
 

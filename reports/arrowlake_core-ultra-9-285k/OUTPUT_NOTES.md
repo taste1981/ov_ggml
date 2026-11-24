@@ -1,11 +1,27 @@
 # Generated outputs on Intel Core Ultra 9 285K (Arrow Lake)
 
-This report records saved output excerpts for the seven Q4_K_M models in [Performance notes](../../docs/PERFORMANCE_NOTES.md), plus selected follow-up runs on the same iGPU.
+This report records saved output excerpts for the eight Q4_K_M models in [Performance notes](../../docs/PERFORMANCE_NOTES.md), plus selected follow-up runs on the same iGPU.
 
 - Each cell shows up to the first 160 characters saved in the batch summary. Prompt labels are nominal; the source summaries list actual token counts.
 - Prompt texts: [5](./prompts/prompt-5.txt), [250](./prompts/prompt-250.txt), [1000](./prompts/prompt-1000.txt), and [2000](./prompts/prompt-2000.txt).
 - **Failed** means the path did not complete. **Not tested** means it was not run in that batch. A completed run or a readable excerpt does not establish output correctness or token-level agreement.
-- Batch IDs identify `summary-<batch>.md` in the corresponding model folder under `llama-work-note/results/compare-gpu-4paths`.
+- Batch IDs identify `summary-<batch>.md` in the corresponding model folder (or its `perf-compare` subfolder) under `llama-work-note/results/compare-gpu-4paths`.
+
+## Contents
+
+- [Main batches](#main-batches)
+  - [Llama-3.2-1B-Instruct Q4_K_M](#llama-32-1b-instruct-q4_k_m)
+  - [Llama-3.1-8B-Instruct Q4_K_M](#llama-31-8b-instruct-q4_k_m)
+  - [Qwen3-4B Q4_K_M](#qwen3-4b-q4_k_m)
+  - [Qwen3.5-4B Q4_K_M](#qwen35-4b-q4_k_m)
+  - [Nanbeige4.2-3B Q4_K_M](#nanbeige42-3b-q4_k_m)
+  - [Gemma-4-E2B-IT Q4_K_M](#gemma-4-e2b-it-q4_k_m)
+  - [Gemma-4-E4B-IT Q4_K_M](#gemma-4-e4b-it-q4_k_m)
+  - [Gemma-4-12B-IT Q4_K_M](#gemma-4-12b-it-q4_k_m)
+- [Selected follow-up runs](#selected-follow-up-runs)
+  - [Llama-3.2-1B-Instruct: GGUF input modes](#llama-32-1b-instruct-gguf-input-modes)
+  - [Qwen3.5-4B: one-token GGML graph](#qwen35-4b-one-token-ggml-graph)
+  - [Laguna-XS-2.1 Q4_K_M](#laguna-xs-21-q4_k_m)
 
 ## Main batches
 
@@ -52,6 +68,17 @@ Batch: `20261120-153933`. GenAI + Vulkan rejected the `b1024` prefill graph for 
 | 250 | &#60;think&#62;<br>Thinking Process:<br><br>1.  &#42;&#42;Analyze the Request:&#42;&#42;<br>    &#42;   Input: A text describing the history of the printing press, | &#60;think&#62;<br>Thinking Process:<br><br>1.  &#42;&#42;Analyze the Request:&#42;&#42;<br>    &#42;   Input: A text describing the history of the printing press, | **Failed** (`exit2`) | or as the more's<br><br><br> just<br> is- The the - "a was3 no by is with the<br> noS<br><br>. | Not tested |
 | 1000 | &#60;think&#62;<br>Thinking Process:<br><br>1.  &#42;&#42;Analyze the Request:&#42;&#42;<br>    &#42;   Input: A text about the history of navigation, specifically focusing | &#60;think&#62;<br>Thinking Process:<br><br>1.  &#42;&#42;Analyze the Request:&#42;&#42;<br>    &#42;   Source text: A passage about the history of navigation, specifically | **Failed** (`exit2`) | &#42;&#42;The just<br><br> new HadsA haveon- somethingASun another a other other a new A misseds another as still in ae | Not tested |
 | 2000 | &#60;think&#62;<br>Thinking Process:<br><br>1.  &#42;&#42;Analyze the Request:&#42;&#42;<br>    &#42;   Input: A text about the history of navigation and the development | &#60;think&#62;<br>Thinking Process:<br><br>1.  &#42;&#42;Analyze the Request:&#42;&#42;<br>    &#42;   Input: A text about the history of navigation and the development | **Failed** (`exit2`) | is<br><br>.<br>某一坚持在知<br>三据<br> are en一位一位准在一位一一位某某仅的…… | Not tested |
+
+### Nanbeige4.2-3B Q4_K_M
+
+Batch: `20261124-112312`. Both GenAI + OV modes rejected the `nanbeige` architecture and produced no text. Both llama.cpp paths and GenAI + Vulkan produced text at all four prompt lengths. At prompts 1000 and 2000, GenAI + Vulkan logged 985 and 1969 input tokens, versus 979 and 1957 for both llama.cpp paths; these excerpts do not establish matched-input or token-level agreement. See the [performance results](../../docs/PERFORMANCE_NOTES.md#nanbeige42-3b-q4_k_m).
+
+| Prompt | llama.cpp + Vulkan | llama.cpp + OV | GenAI + Vulkan | GenAI + OV (ovfe) | GenAI + OV (reader) |
+| ---: | --- | --- | --- | --- | --- |
+| 5 | Paris.<br>&#60;/think&#62;<br><br>The capital of France is &#42;&#42;Paris&#42;&#42;. 🇫🇷<br><br>If you have any other questions— | Paris.<br><br>Let me provide a comprehensive answer about Paris as the capital of France:<br><br>&#42;&#42;Paris&#42;&#42; is the capital city of France. Here are | Paris.<br>&#60;/think&#62;<br><br>The capital of France is &#42;&#42;Paris&#42;&#42;. 🇫🇷<br><br>If you have any other questions | **Failed** (`exit2`) | **Failed** (`exit2`) |
+| 250 | Answer: The history of the printing press began with woodblock printing in China, followed by movable type innovations in China and Korea, and finally by Gutenb | Answer: The history of the printing press began with woodblock printing in China, followed by movable type innovations in China and Korea, and finally culminate | Answer: The history of the printing press began with woodblock printing in China, followed by movable type innovations in China and Korea, and finally by Gutenb | **Failed** (`exit2`) | **Failed** (`exit2`) |
+| 1000 | 1. The text discusses how navigators determined their position on the open sea far from land.<br>2. Different methods were used by various cultures to | 1. Early sailors used natural observations and memorized knowledge to navigate the open sea, while later navigators developed instruments and techniques to dete | 1. The text discusses how navigators fixed their position on the open sea far from land.<br>2. Different methods were used by various cultures to | **Failed** (`exit2`) | **Failed** (`exit2`) |
+| 2000 | 1. The text discusses how navigators learned to determine their position on the open sea far from land.<br>2. The text discusses how navigators | 1. Early navigators relied on natural observations (stars, ocean swells, birds, clouds) and developed methods to determine latitude using the Pole Star | 1. Early navigators used various methods to determine their position on the open sea, including reading the sea and stars, Arab/Persian latitude measurement | **Failed** (`exit2`) | **Failed** (`exit2`) |
 
 ### Gemma-4-E2B-IT Q4_K_M
 
