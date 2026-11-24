@@ -1,6 +1,6 @@
 # Generated outputs on Intel Core Ultra 9 285K (Arrow Lake)
 
-This report records saved output excerpts for the eight Q4_K_M models in [Performance notes](../../docs/PERFORMANCE_NOTES.md), plus selected follow-up runs on the same iGPU.
+This report records saved output excerpts for the nine Q4_K_M models in [Performance notes](../../docs/PERFORMANCE_NOTES.md), plus selected follow-up runs on the same iGPU.
 
 - Each cell shows up to the first 160 characters saved in the batch summary. Prompt labels are nominal; the source summaries list actual token counts.
 - Prompt texts: [5](./prompts/prompt-5.txt), [250](./prompts/prompt-250.txt), [1000](./prompts/prompt-1000.txt), and [2000](./prompts/prompt-2000.txt).
@@ -15,6 +15,7 @@ This report records saved output excerpts for the eight Q4_K_M models in [Perfor
   - [Qwen3-4B Q4_K_M](#qwen3-4b-q4_k_m)
   - [Qwen3.5-4B Q4_K_M](#qwen35-4b-q4_k_m)
   - [Nanbeige4.2-3B Q4_K_M](#nanbeige42-3b-q4_k_m)
+  - [Phi-4-mini-instruct Q4_K_M](#phi-4-mini-instruct-q4_k_m)
   - [Gemma-4-E2B-IT Q4_K_M](#gemma-4-e2b-it-q4_k_m)
   - [Gemma-4-E4B-IT Q4_K_M](#gemma-4-e4b-it-q4_k_m)
   - [Gemma-4-12B-IT Q4_K_M](#gemma-4-12b-it-q4_k_m)
@@ -79,6 +80,17 @@ Batch: `20261124-112312`. Both GenAI + OV modes rejected the `nanbeige` architec
 | 250 | Answer: The history of the printing press began with woodblock printing in China, followed by movable type innovations in China and Korea, and finally by Gutenb | Answer: The history of the printing press began with woodblock printing in China, followed by movable type innovations in China and Korea, and finally culminate | Answer: The history of the printing press began with woodblock printing in China, followed by movable type innovations in China and Korea, and finally by Gutenb | **Failed** (`exit2`) | **Failed** (`exit2`) |
 | 1000 | 1. The text discusses how navigators determined their position on the open sea far from land.<br>2. Different methods were used by various cultures to | 1. Early sailors used natural observations and memorized knowledge to navigate the open sea, while later navigators developed instruments and techniques to dete | 1. The text discusses how navigators fixed their position on the open sea far from land.<br>2. Different methods were used by various cultures to | **Failed** (`exit2`) | **Failed** (`exit2`) |
 | 2000 | 1. The text discusses how navigators learned to determine their position on the open sea far from land.<br>2. The text discusses how navigators | 1. Early navigators relied on natural observations (stars, ocean swells, birds, clouds) and developed methods to determine latitude using the Pole Star | 1. Early navigators used various methods to determine their position on the open sea, including reading the sea and stars, Arab/Persian latitude measurement | **Failed** (`exit2`) | **Failed** (`exit2`) |
+
+### Phi-4-mini-instruct Q4_K_M
+
+Batch: `20261124-142946`. The two Vulkan paths have matching saved excerpts at prompts 5 and 250, but different excerpts at 1000 and 2000. At prompts 250, 1000, and 2000, GenAI logged 235, 991, and 1979 input tokens, versus 234, 967, and 1932 for llama.cpp. OVFE produced garbled text for all four prompts; the legacy reader failed during GGUF loading. This batch used no chat template and ignored EOS, so it did not verify stopping at `<|end|>`. See the [performance results](../../docs/PERFORMANCE_NOTES.md#phi-4-mini-instruct-q4_k_m).
+
+| Prompt | llama.cpp + Vulkan | llama.cpp + OV | GenAI + Vulkan | GenAI + OV (ovfe) | GenAI + OV (reader) |
+| ---: | --- | --- | --- | --- | --- |
+| 5 | Paris. Paris is the capital of France. Paris is located in France. Paris is the capital of France. Paris is located in France. Paris is the capital | Paris. Paris is known for its iconic landmarks such as the Eiffel Tower, Notre-Dame Cathedral, and the Louvre Museum. The Eiffel Tower, constructed in 188 | Paris. Paris is the capital of France. Paris is located in France. Paris is the capital of France. Paris is located in France. Paris is the capital | ?<br> PriorThough joint foundation attDebConvers RelEnc promoted supports peer stem periodically EvansDirect expansion paths prediction successfully healthy joins | **Failed** (`exit2`) |
+| 250 | Gutenberg's invention of the printing press combined existing ideas into a practical system that revolutionized the production of books, spreading knowledge and | Gutenberg's printing press combined metal type, oil-based ink, and a screw press to produce pages faster than scribes could copy by hand, spreading printing sho | Gutenberg's invention of the printing press combined existing ideas into a practical system that revolutionized the production of books, spreading knowledge and | The, mounting chemical electrical Mark electrical Tom substances Wh restrictions pie chemical Henry electrical wording Ex Wh Pe Wh Wh , oneationeting-se prin | **Failed** (`exit2`) |
+| 1000 | Navigators used a combination of celestial navigation, dead reckoning, and timekeeping to determine their position at sea. Polynesian voyagers relied on memoriz | Navigators used a combination of celestial navigation, dead reckoning, and timekeeping to determine their position at sea. Polynesian voyagers relied on memoriz | The first navigators used the stars, the sea and the flight of birds to find their way across the oceans. Later, they used the magnetic compass | Thea first both once to outside  in both Round  La  a or whichA  -- "; Secret:, to to- unexpectedly together onlyCombine | **Failed** (`exit2`) |
+| 2000 | Navigators learned to fix their position far from land by observing the sky, using instruments like the magnetic compass and astrolabe, and later by measuring t | Navigators have always struggled to determine their position at sea. Over time, they developed a variety of tools and methods to measure latitude and longitude, | Navigators learned to fix their position far from land by observing the sky, using clocks, and accumulating knowledge over centuries. The magnetic compass and d | Thestarting indefinitely Type experts positively Field; fiveprocess Excfr Gra Gra BrickConbus protonopen successfully simultaneously enjoyed respectively-cut Ex | **Failed** (`exit2`) |
 
 ### Gemma-4-E2B-IT Q4_K_M
 

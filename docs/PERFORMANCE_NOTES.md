@@ -1,6 +1,6 @@
 # Performance notes: Four GGUF paths on Intel integrated graphics
 
-Eight Q4_K_M models were measured across the 2026-11-20, 2026-11-23, and 2026-11-24 batches. Batch IDs identify the source summaries in `llama-work-note/results/compare-gpu-4paths`.
+Nine Q4_K_M models were measured across the 2026-11-20, 2026-11-23, and 2026-11-24 batches. Batch IDs identify the source summaries in `llama-work-note/results/compare-gpu-4paths`.
 
 ## Tested models
 
@@ -9,6 +9,7 @@ Eight Q4_K_M models were measured across the 2026-11-20, 2026-11-23, and 2026-11
 - [Qwen3-4B Q4_K_M](#qwen3-4b-q4_k_m)
 - [Qwen3.5-4B Q4_K_M](#qwen35-4b-q4_k_m)
 - [Nanbeige4.2-3B Q4_K_M](#nanbeige42-3b-q4_k_m)
+- [Phi-4-mini-instruct Q4_K_M](#phi-4-mini-instruct-q4_k_m)
 - [Gemma-4-E2B-IT Q4_K_M](#gemma-4-e2b-it-q4_k_m)
 - [Gemma-4-E4B-IT Q4_K_M](#gemma-4-e4b-it-q4_k_m)
 - [Gemma-4-12B-IT Q4_K_M](#gemma-4-12b-it-q4_k_m)
@@ -215,6 +216,41 @@ Batch: `20261124-112312` (`Nanbeige4.2-3B-Q4_K_M/perf-compare/summary-20261124-1
 | 250 | 111.3 (1.00x) | 140.5 (1.26x) | 120.0 (1.08x) | Exit 2 | Exit 2 |
 | 1000 | 116.3 (1.00x) | 248.7 (2.14x) | 142.1 (1.22x) | Exit 2 | Exit 2 |
 | 2000 | 124.6 (1.00x) | 405.0 (3.25x) | 143.0 (1.15x) | Exit 2 | Exit 2 |
+
+## Phi-4-mini-instruct Q4_K_M
+
+Batch: `20261124-142946` (`microsoft_Phi-4-mini-instruct-Q4_K_M/perf-compare/summary-20261124-142946.md`). Both llama.cpp paths, GenAI + Vulkan, and GenAI + OV (ovfe) completed at all four prompt lengths.
+
+- **llama.cpp + OV:** Decode took 6125.0–6319.9 ms/token, about 89–99x the llama.cpp + Vulkan latency. The cause was not established.
+- **GenAI + OV:** OVFE produced garbled text at all four prompt lengths; its timings are for reference only. The legacy reader failed during GGUF loading with `gguf_tensor_to_f16 failed` and exited with code `2`.
+- **Input comparison:** The paths reported different token counts for the three longer prompts. The ratios compare the same prompt text, not identical token sequences. This batch ignored EOS and did not apply a chat template, so it did not test natural stopping. See the [saved output excerpts](../reports/arrowlake_core-ultra-9-285k/OUTPUT_NOTES.md#phi-4-mini-instruct-q4_k_m).
+
+**Prompt tokens**
+
+| Prompt | llama.cpp + Vulkan | llama.cpp + OV | GenAI + Vulkan | GenAI + OV (ovfe) | GenAI + OV (reader) |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 5 | 5 | 5 | 5 | 5 | - |
+| 250 | 234 | 234 | 235 | 235 | - |
+| 1000 | 967 | 967 | 991 | 991 | - |
+| 2000 | 1932 | 1932 | 1979 | 1979 | - |
+
+**TTFT (ms)**
+
+| Prompt | llama.cpp + Vulkan | llama.cpp + OV | GenAI + Vulkan | GenAI + OV (ovfe) | GenAI + OV (reader) |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 5 | 68.0 (1.00x) | 6095.2 (89.57x) | 4480.3 (65.84x) | 115.7 (1.70x) | Exit 2 |
+| 250 | 1162.2 (1.00x) | 7587.3 (6.53x) | 4508.4 (3.88x) | 839.0 (0.72x) | Exit 2 |
+| 1000 | 4743.7 (1.00x) | 22892.8 (4.83x) | 4929.7 (1.04x) | 3012.6 (0.64x) | Exit 2 |
+| 2000 | 11678.0 (1.00x) | 49164.9 (4.21x) | 12474.2 (1.07x) | 6347.4 (0.54x) | Exit 2 |
+
+**TPOT (ms/token)**
+
+| Prompt | llama.cpp + Vulkan | llama.cpp + OV | GenAI + Vulkan | GenAI + OV (ovfe) | GenAI + OV (reader) |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 5 | 63.3 (1.00x) | 6292.2 (99.42x) | 68.8 (1.09x) | 50.6 (0.80x) | Exit 2 |
+| 250 | 65.5 (1.00x) | 6125.0 (93.51x) | 72.4 (1.11x) | 51.7 (0.79x) | Exit 2 |
+| 1000 | 68.2 (1.00x) | 6229.0 (91.31x) | 75.7 (1.11x) | 54.6 (0.80x) | Exit 2 |
+| 2000 | 70.8 (1.00x) | 6319.9 (89.21x) | 78.1 (1.10x) | 57.7 (0.81x) | Exit 2 |
 
 ## Gemma-4-E2B-IT Q4_K_M
 
