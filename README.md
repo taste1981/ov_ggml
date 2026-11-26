@@ -16,7 +16,7 @@ The models are the Q4_K_M files from the "Validated Models" table of the llama.c
 - [Test report](reports/lunarlake_core-ultra-7-268v/TEST_REPORT.md) from a Core Ultra 7 268V with an Arc 140V (Lunar Lake). The GGML device ran all 34 models on the CPU and 32 on the GPU, and decoded 1.17× faster than OpenVINO's GPU plugin on the same GPU. Prefill is its main gap.
 - [Gap analysis](docs/GAP_ANALYSIS.md): the design review's findings after these tests, and the new gaps the tests found.
 - [Performance gap analysis](docs/GAP_ANALYSIS_PERF.md): NPU GGUF performance, the GenAI BOS fix, and additional SWA and large-bucket verification.
-- [Performance notes](docs/PERFORMANCE_NOTES.md): latest four-path measurements on Intel integrated graphics, grouped by model and quantization.
+- [Performance notes](reports/arrowlake_core-ultra-9-285k/PERFORMANCE_NOTES.md) from a Core Ultra 9 285K (Arrow Lake): latest four-path measurements on its integrated graphics, grouped by model and quantization.
 - [Architecture and design review](docs/architecture.pdf) of the GGML device, its GenAI integration and the artifact dumper. It is also in [HTML](docs/architecture.html); download that to view it in a browser.
 - [BUILD.md](BUILD.md): how to build everything from source on Windows.
 - [PR_GATEKEEPING.md](PR_GATEKEEPING.md): the pull requests to Yamini's repositories that this package needs, and their status.

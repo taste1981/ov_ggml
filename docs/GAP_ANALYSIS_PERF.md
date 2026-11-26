@@ -1,12 +1,12 @@
 # Gap analysis: Issues found during OpenVINO GGUF performance testing (2026-11-20)
 
-**Overview: 19 findings, 3 fixed, 16 open.**
+**Overview: 20 findings, 3 fixed, 17 open.**
 
 This document records issues uncovered during OpenVINO GGUF performance testing in `llama-work-note`, including correctness and compatibility issues. It excludes issues already documented in the [main gap analysis](GAP_ANALYSIS.md). Finding IDs are local to this document.
 
 Severity, as in the main review: **P0** wrong results or memory corruption; **P1** blocks a realistic use case, or a major gap; **P2** robustness, performance or process; **P3** hygiene.
 
-The [November 20 iGPU results](PERFORMANCE_NOTES.md) reproduce findings 5, 8 and 9 and add findings 17-19. No previously open finding was verified fixed. NPU findings and the controlled CPU quantization check (11) were not retested.
+The [November 20 iGPU results](../reports/arrowlake_core-ultra-9-285k/PERFORMANCE_NOTES.md) reproduce findings 5, 8 and 9 and add findings 17-19. No previously open finding was verified fixed. NPU findings and the controlled CPU quantization check (11) were not retested. Finding 20 comes from a GenAI + Vulkan decode profile on 2026-11-25 and 2026-11-26.
 
 ## 1. Fixed since the review
 
@@ -36,5 +36,6 @@ The [November 20 iGPU results](PERFORMANCE_NOTES.md) reproduce findings 5, 8 and
 | 17 | llama.cpp / iGPU | The llama.cpp OpenVINO backend on `GPU.0` did not always reproduce its own greedy output across runs. | On November 20, Llama-3.2-1B at prompt 250, Qwen3-4B at 1000 and Qwen3.5-4B at 5 had non-identical text across five runs. At Qwen3-4B prompt 5, the saved sample repeatedly gave the wrong completion. No common cause was established; Gemma 12B is tracked separately in finding 9. | Compare prompt IDs and first divergent logits across repeated runs and against llama.cpp + Vulkan. | P0 |
 | 18 | llama.cpp / iGPU | Gemma-4 E2B and E4B Q4_K_M crash at the start of generation on the llama.cpp OpenVINO backend. | All four prompt lengths returned Windows access-violation status `0xC0000005` without output. The shortest-prompt logs stop after printing the generation parameters. Both Vulkan paths completed on this iGPU; main gap N2 concerns a different Vulkan load failure on Arc 140V. | Capture the exception stack and locate the first failing call on the OpenVINO backend. | P1 |
 | 19 | GPU | GenAI + OV cannot compile Gemma-4 E2B and E4B Q4_K_M with the GGUF frontend on `GPU.0`. | All four prompt lengths failed before generation. The shortest-prompt logs for both models show `ProgramBuilder build failed` and `clBuildProgram` returning `CL_BUILD_PROGRAM_FAILURE` (`-11`). The logs do not establish a common cause with finding 18. | Capture the OpenCL build log and isolate the failing kernel. | P1 |
+| 20 | GenAI + Vulkan / iGPU | The GGML device reads logits with the synchronous `ggml_backend_tensor_get`. On a UMA GPU, this makes the CPU copy them directly from uncached Vulkan memory. | **Fix submitted in [ynimmaga/openvino #118](https://github.com/ynimmaga/openvino/pull/118) (commit `099d14d`).** On the Intel iGPU, the asynchronous read lowered Llama-3.2-1B decode TPOT by 1.79-2.20 ms/token (6.0%-7.3%) in both run orders, with matching output token IDs. Qwen3-4B and Phi-4-mini were also faster; RTX 5090 (non-UMA) showed no change. Code path, data and setup: [finding 20 report](../reports/arrowlake_core-ultra-9-285k/20-LOGITS_READBACK_AB.md). | Read through `ggml_backend_tensor_get_async` on the backend that owns the tensor, followed by `ggml_backend_synchronize`, as llama.cpp does. ggml then copies the logits on the GPU into its host-cached staging buffer before the CPU reads them, with no ggml patch. | P2 |
 
 The Qwen3.5-4B GenAI + Vulkan exit is covered by [main gap N3](GAP_ANALYSIS.md#3-new-gaps-found-by-testing): the runner rejects the 1024-row prefill graph for recurrent models. No one-token-only retest was run. The two smaller Gemma models completing on this iGPU do not verify a fix for main gap N2 on Arc 140V.

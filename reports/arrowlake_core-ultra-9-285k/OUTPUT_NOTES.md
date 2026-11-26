@@ -1,6 +1,6 @@
 # Generated outputs on Intel Core Ultra 9 285K (Arrow Lake)
 
-This report records saved output excerpts for the nine Q4_K_M models in [Performance notes](../../docs/PERFORMANCE_NOTES.md), plus selected follow-up runs on the same iGPU.
+This report records saved output excerpts for the nine Q4_K_M models in [Performance notes](PERFORMANCE_NOTES.md), plus selected follow-up runs on the same iGPU.
 
 - Each cell shows up to the first 160 characters saved in the batch summary. Prompt labels are nominal; the source summaries list actual token counts.
 - Prompt texts: [5](./prompts/prompt-5.txt), [250](./prompts/prompt-250.txt), [1000](./prompts/prompt-1000.txt), and [2000](./prompts/prompt-2000.txt).
@@ -72,7 +72,7 @@ Batch: `20261120-153933`. GenAI + Vulkan rejected the `b1024` prefill graph for 
 
 ### Nanbeige4.2-3B Q4_K_M
 
-Batch: `20261124-112312`. Both GenAI + OV modes rejected the `nanbeige` architecture and produced no text. Both llama.cpp paths and GenAI + Vulkan produced text at all four prompt lengths. At prompts 1000 and 2000, GenAI + Vulkan logged 985 and 1969 input tokens, versus 979 and 1957 for both llama.cpp paths; these excerpts do not establish matched-input or token-level agreement. See the [performance results](../../docs/PERFORMANCE_NOTES.md#nanbeige42-3b-q4_k_m).
+Batch: `20261124-112312`. Both GenAI + OV modes rejected the `nanbeige` architecture and produced no text. Both llama.cpp paths and GenAI + Vulkan produced text at all four prompt lengths. At prompts 1000 and 2000, GenAI + Vulkan logged 985 and 1969 input tokens, versus 979 and 1957 for both llama.cpp paths; these excerpts do not establish matched-input or token-level agreement. See the [performance results](PERFORMANCE_NOTES.md#nanbeige42-3b-q4_k_m).
 
 | Prompt | llama.cpp + Vulkan | llama.cpp + OV | GenAI + Vulkan | GenAI + OV (ovfe) | GenAI + OV (reader) |
 | ---: | --- | --- | --- | --- | --- |
@@ -83,7 +83,7 @@ Batch: `20261124-112312`. Both GenAI + OV modes rejected the `nanbeige` architec
 
 ### Phi-4-mini-instruct Q4_K_M
 
-Batch: `20261124-142946`. The two Vulkan paths have matching saved excerpts at prompts 5 and 250, but different excerpts at 1000 and 2000. At prompts 250, 1000, and 2000, GenAI logged 235, 991, and 1979 input tokens, versus 234, 967, and 1932 for llama.cpp. OVFE produced garbled text for all four prompts; the legacy reader failed during GGUF loading. This batch used no chat template and ignored EOS, so it did not verify stopping at `<|end|>`. See the [performance results](../../docs/PERFORMANCE_NOTES.md#phi-4-mini-instruct-q4_k_m).
+Batch: `20261124-142946`. The two Vulkan paths have matching saved excerpts at prompts 5 and 250, but different excerpts at 1000 and 2000. At prompts 250, 1000, and 2000, GenAI logged 235, 991, and 1979 input tokens, versus 234, 967, and 1932 for llama.cpp. OVFE produced garbled text for all four prompts; the legacy reader failed during GGUF loading. This batch used no chat template and ignored EOS, so it did not verify stopping at `<|end|>`. See the [performance results](PERFORMANCE_NOTES.md#phi-4-mini-instruct-q4_k_m).
 
 | Prompt | llama.cpp + Vulkan | llama.cpp + OV | GenAI + Vulkan | GenAI + OV (ovfe) | GenAI + OV (reader) |
 | ---: | --- | --- | --- | --- | --- |

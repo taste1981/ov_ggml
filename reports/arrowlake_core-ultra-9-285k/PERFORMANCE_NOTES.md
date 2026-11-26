@@ -188,7 +188,7 @@ Batch: `20261120-153933`.
 Batch: `20261124-112312` (`Nanbeige4.2-3B-Q4_K_M/perf-compare/summary-20261124-112312.md`). Both llama.cpp paths and GenAI + Vulkan completed at all four prompt lengths.
 
 - **GenAI + OV:** Both `ovfe` and `reader` exited with code `2` before generation. The native GGUF builder and the legacy GGUF reader both rejected the `nanbeige` architecture.
-- **GenAI + Vulkan:** With the 1024-token prefill bucket, the 6-token prompt took 8015.0 ms to reach the first token. The two longer prompts had different input token counts across GenAI and llama.cpp, so their ratios compare the same prompt text, not identical token sequences. See the [saved output excerpts](../reports/arrowlake_core-ultra-9-285k/OUTPUT_NOTES.md#nanbeige42-3b-q4_k_m).
+- **GenAI + Vulkan:** With the 1024-token prefill bucket, the 6-token prompt took 8015.0 ms to reach the first token. The two longer prompts had different input token counts across GenAI and llama.cpp, so their ratios compare the same prompt text, not identical token sequences. See the [saved output excerpts](OUTPUT_NOTES.md#nanbeige42-3b-q4_k_m).
 
 **Prompt tokens**
 
@@ -223,7 +223,7 @@ Batch: `20261124-142946` (`microsoft_Phi-4-mini-instruct-Q4_K_M/perf-compare/sum
 
 - **llama.cpp + OV:** Decode took 6125.0–6319.9 ms/token, about 89–99x the llama.cpp + Vulkan latency. The cause was not established.
 - **GenAI + OV:** OVFE produced garbled text at all four prompt lengths; its timings are for reference only. The legacy reader failed during GGUF loading with `gguf_tensor_to_f16 failed` and exited with code `2`.
-- **Input comparison:** The paths reported different token counts for the three longer prompts. The ratios compare the same prompt text, not identical token sequences. This batch ignored EOS and did not apply a chat template, so it did not test natural stopping. See the [saved output excerpts](../reports/arrowlake_core-ultra-9-285k/OUTPUT_NOTES.md#phi-4-mini-instruct-q4_k_m).
+- **Input comparison:** The paths reported different token counts for the three longer prompts. The ratios compare the same prompt text, not identical token sequences. This batch ignored EOS and did not apply a chat template, so it did not test natural stopping. See the [saved output excerpts](OUTPUT_NOTES.md#phi-4-mini-instruct-q4_k_m).
 
 **Prompt tokens**
 
