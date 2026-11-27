@@ -143,6 +143,14 @@ cmake -S <package>\src\ggml_llm -B build\ggml_llm -G "Visual Studio 17 2022" -A 
 cmake --build build\ggml_llm --config Release
 ```
 
+**ggml_paged** (`src\ggml_paged`), the paged-attention / continuous-batching test driver (L5), builds the same way:
+
+```bat
+cmake -S <package>\src\ggml_paged -B build\ggml_paged -G "Visual Studio 17 2022" -A x64 ^
+    -DOpenVINO_DIR=C:\ov\build\openvino -DOpenVINOGenAI_DIR=C:\ov\build\genai
+cmake --build build\ggml_paged --config Release
+```
+
 **GenAI text-generation samples** (`greedy_causal_lm`, `chat_sample`, `benchmark_genai`, ...): GenAI's `samples\cpp\text_generation` folder is not a standalone CMake project, so `src\genai_samples` in this package wraps it:
 
 ```bat
